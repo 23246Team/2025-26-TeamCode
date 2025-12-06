@@ -27,14 +27,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 
 /*
  * This file contains an example of a Linear "OpMode".
@@ -63,31 +68,44 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
+@Config
+@TeleOp(name="Basic: Omni Linear OpMode", group="Linear OpMode")
 
-@TeleOp(name="TeleOp", group="Linear OpMode")
-
-public class TeleOp extends LinearOpMode {
+public class BasicOmniOpMode_Linear extends LinearOpMode {
 
     // Declare OpMode members for each of the 4 motors.
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor frontLeftDrive = null;
-    private DcMotor backLeftDrive = null;
-    private DcMotor frontRightDrive = null;
-    private DcMotor backRightDrive = null;
+    private DcMotorEx frontLeftDrive = null;
+    private DcMotorEx backLeftDrive = null;
+    private DcMotorEx frontRightDrive = null;
+    private DcMotorEx backRightDrive = null;
+    private DcMotorEx intakeMotor = null;
+    private DcMotorEx rightOuttake = null;
+    private DcMotorEx leftOuttake = null;
+    private CRServo outtakeServo = null;
+    private CRServo intakeServo = null;
+    private CRServo belt = null;
+    public static double kFront = 1.0;
+    public static double kBack  = 1.0;
+
+    //private DcMotor liftMotor = null;
 
     @Override
     public void runOpMode() {
 
         // Initialize the hardware variables. Note that the strings used here must correspond
         // to the names assigned during the robot configuration step on the DS or RC devices.
-        frontLeftDrive = hardwareMap.get(DcMotor.class, "frontLeft");
-        backLeftDrive = hardwareMap.get(DcMotor.class, "backLeft");
-        frontRightDrive = hardwareMap.get(DcMotor.class, "frontRight");
-        backRightDrive = hardwareMap.get(DcMotor.class, "backRight");
-        MecanumDrive mecanum = new MecanumDrive(frontLeftDrive, frontRightDrive,
-                backLeftDrive, backRightDrive);
-        driverOp = new GamepadEx(gamepad1);
-
+        frontLeftDrive = hardwareMap.get(DcMotorEx.class, "leftFront");
+        backLeftDrive = hardwareMap.get(DcMotorEx.class, "leftBack");
+        frontRightDrive = hardwareMap.get(DcMotorEx.class, "rightFront");
+        backRightDrive = hardwareMap.get(DcMotorEx.class, "rightBack");
+        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        rightOuttake = hardwareMap.get(DcMotorEx.class, "rightOutake");
+        leftOuttake = hardwareMap.get(DcMotorEx.class, "leftOutake");
+        outtakeServo = hardwareMap.get(CRServo.class, "outakeServo");
+        intakeServo = hardwareMap.get(CRServo.class, "intakeServo");
+        belt = hardwareMap.get(CRServo.class, "beltServo");
+        //liftMotor = hardwareMap.get(DcMotor.class, "liftMotor");
 
         // ########################################################################################
         // !!!            IMPORTANT Drive Information. Test your motor directions.            !!!!!
@@ -99,10 +117,10 @@ public class TeleOp extends LinearOpMode {
         // when you first test your robot, push the left joystick forward and observe the direction the wheels turn.
         // Reverse the direction (flip FORWARD <-> REVERSE ) of any wheel that runs backward
         // Keep testing until ALL the wheels move the robot forward when you push the left joystick forward.
-        frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
-        frontRightDrive.setDirection(DcMotor.Direction.FORWARD);
-        backRightDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
+        backRightDrive.setDirection(DcMotor.Direction.REVERSE);
 
         // Wait for the game to start (driver presses START)
         telemetry.addData("Status", "Initialized");
@@ -114,7 +132,6 @@ public class TeleOp extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             double max;
-
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
             double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
             double lateral =  gamepad1.left_stick_x;
@@ -122,7 +139,10 @@ public class TeleOp extends LinearOpMode {
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
-
+            double frontLeftPower  = (axial - lateral + yaw)*kFront;
+            double frontRightPower = (axial + lateral - yaw)*kFront;
+            double backLeftPower   = (axial + lateral + yaw)*kBack;
+            double backRightPower  = (axial - lateral - yaw)*kBack;
 
             // Normalize the values so no wheel power exceeds 100%
             // This ensures that the robot maintains the desired motion.
@@ -153,18 +173,57 @@ public class TeleOp extends LinearOpMode {
             frontRightPower = gamepad1.y ? 1.0 : 0.0;  // Y gamepad
             backRightPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
             */
-
-            // Send calculated power to wheels
-            mecanum.driveRobotCentric(
-                    driverOp.getLeftX(),
-                    driverOp.getLeftY(),
-                    driverOp.getRightY()
-            );
+            if (gamepad1.a){
+                frontLeftPower  *=0.5;
+                frontRightPower *=0.5;
+                backLeftPower   *=0.5;
+                backRightPower  *=0.5;
+            }
+            if (gamepad2.left_stick_y > 0) {
+                intakeMotor.setPower(1);
+                intakeServo.setPower(1);
+            } else if (gamepad2.left_stick_y < -0.1) {
+                intakeMotor.setPower(-1);
+                intakeServo.setPower(-1);
+            } else {
+                intakeMotor.setPower(0);
+                intakeServo.setPower(0);
+            }
+            if (gamepad2.right_trigger != 0){
+                rightOuttake.setPower(-1);
+                leftOuttake.setPower(1);
+            } else {
+                rightOuttake.setPower(0);
+                leftOuttake.setPower(0);
+            }
+            if (gamepad2.a){
+                outtakeServo.setPower(1);
+            } else if (gamepad2.b){
+                outtakeServo.setPower(-1);
+            } else {
+                outtakeServo.setPower(0);
+            }
+            if (gamepad2.dpad_up){
+                belt.setPower(1);
+            } else if (gamepad2.dpad_down){
+                belt.setPower(-1);
+            } else {
+                belt.setPower(0);
+            }
+            frontRightDrive.setPower(frontRightPower);
+            backLeftDrive.setPower(backLeftPower);
+            backRightDrive.setPower(backRightPower);
+            frontLeftDrive.setPower(frontLeftPower);
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Front left/Right", "%4.2f, %4.2f", frontLeftPower, frontRightPower);
             telemetry.addData("Back  left/Right", "%4.2f, %4.2f", backLeftPower, backRightPower);
+            telemetry.addData("FL vel", frontLeftDrive.getVelocity());
+            telemetry.addData("FR vel", frontRightDrive.getVelocity());
+            telemetry.addData("BL vel", backLeftDrive.getVelocity());
+            telemetry.addData("BR vel", backRightDrive.getVelocity());
+
             telemetry.update();
         }
     }}
