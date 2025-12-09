@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
@@ -54,32 +54,37 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
-@Autonomous(name="Robot: Auto Drive By Time", group="Robot")
-@Disabled
-public class RobotAutoDriveByTime_Linear extends LinearOpMode {
+@Autonomous(name="Right", group="Robot")
+
+public class Right extends LinearOpMode {
 
     /* Declare OpMode members. */
-    private DcMotor         leftDrive   = null;
-    private DcMotor         rightDrive  = null;
+    private DcMotor frontLeftDrive  = null;
+    private DcMotor backLeftDrive   = null;
+    private DcMotor frontRightDrive = null;
+    private DcMotor backRightDrive  = null;
 
     private ElapsedTime     runtime = new ElapsedTime();
 
-
     static final double     FORWARD_SPEED = 0.6;
     static final double     TURN_SPEED    = 0.5;
+    static final double     kFront = 1.0;
+    static final double     kBack  = 1.0;
 
     @Override
     public void runOpMode() {
 
-        // Initialize the drive system variables.
-        leftDrive  = hardwareMap.get(DcMotor.class, "left_drive");
-        rightDrive = hardwareMap.get(DcMotor.class, "right_drive");
+        // Initialize the drive system variables to match BasicOmniOpMode motor names.
+        frontLeftDrive  = hardwareMap.get(DcMotor.class, "leftFront");
+        backLeftDrive   = hardwareMap.get(DcMotor.class, "leftBack");
+        frontRightDrive = hardwareMap.get(DcMotor.class, "rightFront");
+        backRightDrive  = hardwareMap.get(DcMotor.class, "rightBack");
 
-        // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
-        // When run, this OpMode should start both motors driving forward. So adjust these two lines based on your first test drive.
-        // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
-        leftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightDrive.setDirection(DcMotor.Direction.FORWARD);
+        // Use the same directions as BasicOmniOpMode_Linear
+        frontLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        backLeftDrive.setDirection(DcMotor.Direction.FORWARD);
+        frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
+        backRightDrive.setDirection(DcMotor.Direction.REVERSE);
 
         // Send telemetry message to signify robot waiting;
         telemetry.addData("Status", "Ready to run");    //
@@ -88,41 +93,44 @@ public class RobotAutoDriveByTime_Linear extends LinearOpMode {
         // Wait for the game to start (driver presses START)
         waitForStart();
 
-        // Step through each leg of the path, ensuring that the OpMode has not been stopped along the way.
 
-        // Step 1:  Drive forward for 3 seconds
-        leftDrive.setPower(FORWARD_SPEED);
-        rightDrive.setPower(FORWARD_SPEED);
-        runtime.reset();
-        while (opModeIsActive() && (runtime.seconds() < 3.0)) {
-            telemetry.addData("Path", "Leg 1: %4.1f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
 
-        // Step 2:  Spin right for 1.3 seconds
-        leftDrive.setPower(TURN_SPEED);
-        rightDrive.setPower(-TURN_SPEED);
+        // Step 2: Strafe RIGHT for 3 seconds (positive lateral strafes right)
         runtime.reset();
-        while (opModeIsActive() && (runtime.seconds() < 1.3)) {
-            telemetry.addData("Path", "Leg 2: %4.1f S Elapsed", runtime.seconds());
-            telemetry.update();
-        }
-
-        // Step 3:  Drive Backward for 1 Second
-        leftDrive.setPower(-FORWARD_SPEED);
-        rightDrive.setPower(-FORWARD_SPEED);
-        runtime.reset();
+        setOmniDrivePowers(0.0, FORWARD_SPEED, 0.0);
         while (opModeIsActive() && (runtime.seconds() < 1.0)) {
-            telemetry.addData("Path", "Leg 3: %4.1f S Elapsed", runtime.seconds());
+            telemetry.addData("Path", "Leg 2 (Strafe Right): %4.1f S Elapsed", runtime.seconds());
             telemetry.update();
         }
 
-        // Step 4:  Stop
-        leftDrive.setPower(0);
-        rightDrive.setPower(0);
+        // Stop
+        setOmniDrivePowers(0.0, 0.0, 0.0);
 
         telemetry.addData("Path", "Complete");
         telemetry.update();
         sleep(1000);
+    }
+
+    // Compute wheel powers using the same mixing as BasicOmniOpMode_Linear and apply scaling.
+    private void setOmniDrivePowers(double axial, double lateral, double yaw) {
+        double frontLeftPower  = (axial + lateral - yaw) * kFront;
+        double frontRightPower = (axial - lateral + yaw) * kFront;
+        double backLeftPower   = (axial - lateral - yaw) * kBack;
+        double backRightPower  = (axial + lateral + yaw) * kBack;
+
+        double max = Math.max(Math.abs(frontLeftPower), Math.abs(frontRightPower));
+        max = Math.max(max, Math.abs(backLeftPower));
+        max = Math.max(max, Math.abs(backRightPower));
+        if (max > 1.0) {
+            frontLeftPower  /= max;
+            frontRightPower /= max;
+            backLeftPower   /= max;
+            backRightPower  /= max;
+        }
+
+        frontLeftDrive.setPower(frontLeftPower);
+        frontRightDrive.setPower(frontRightPower);
+        backLeftDrive.setPower(backLeftPower);
+        backRightDrive.setPower(backRightPower);
     }
 }

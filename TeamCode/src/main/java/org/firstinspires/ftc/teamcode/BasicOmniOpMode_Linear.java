@@ -139,10 +139,10 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
 
             // Combine the joystick requests for each axis-motion to determine each wheel's power.
             // Set up a variable for each drive wheel to save the power level for telemetry.
-            double frontLeftPower  = (axial - lateral + yaw)*kFront;
-            double frontRightPower = (axial + lateral - yaw)*kFront;
-            double backLeftPower   = (axial + lateral + yaw)*kBack;
-            double backRightPower  = (axial - lateral - yaw)*kBack;
+            double frontLeftPower  = (axial + lateral - yaw)*kFront;
+            double frontRightPower = (axial - lateral + yaw)*kFront;
+            double backLeftPower   = (axial - lateral - yaw)*kBack;
+            double backRightPower  = (axial + lateral + yaw)*kBack;
 
             // Normalize the values so no wheel power exceeds 100%
             // This ensures that the robot maintains the desired motion.
@@ -179,12 +179,12 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 backLeftPower   *=0.5;
                 backRightPower  *=0.5;
             }
-            if (gamepad2.left_stick_y > 0) {
-                intakeMotor.setPower(1);
-                intakeServo.setPower(1);
-            } else if (gamepad2.left_stick_y < -0.1) {
+            if (gamepad2.left_stick_y > 0.1) {
                 intakeMotor.setPower(-1);
                 intakeServo.setPower(-1);
+            } else if (gamepad2.left_stick_y < -0.1) {
+                intakeMotor.setPower(1);
+                intakeServo.setPower(1);
             } else {
                 intakeMotor.setPower(0);
                 intakeServo.setPower(0);
@@ -196,16 +196,16 @@ public class BasicOmniOpMode_Linear extends LinearOpMode {
                 rightOuttake.setPower(0);
                 leftOuttake.setPower(0);
             }
-            if (gamepad2.a){
+            if (gamepad2.left_trigger != 0){
                 outtakeServo.setPower(1);
-            } else if (gamepad2.b){
+            } else if (gamepad2.left_bumper){
                 outtakeServo.setPower(-1);
             } else {
                 outtakeServo.setPower(0);
             }
-            if (gamepad2.dpad_up){
+            if (gamepad2.right_stick_y >= 0.1){
                 belt.setPower(1);
-            } else if (gamepad2.dpad_down){
+            } else if (gamepad2.right_stick_y <= -0.1){
                 belt.setPower(-1);
             } else {
                 belt.setPower(0);
